@@ -1,0 +1,8 @@
+]633;E;echo "===== which perf =====";0e4d2fcd-1d36-45b3-a1be-1a71244e99a7]633;C===== which perf =====
+/usr/bin/perf
+
+===== perf version =====
+perf version 5.10.0-254.0.0.158.oe2203sp4.aarch64
+
+===== perf_event_paranoid =====
+2
