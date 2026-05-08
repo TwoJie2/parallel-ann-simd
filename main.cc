@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         5
     );
 
-    const size_t pqfs_p = 3000;
+    const size_t pqfs_p = 4000;
 
     // SQ-SIMD: build quantized base index before query loop.
     // This is an offline preprocessing step and is not included in per-query latency.

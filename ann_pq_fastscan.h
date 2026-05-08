@@ -317,37 +317,33 @@ static inline void pqfs_quantize_lut_u8(
     const PQFastScanIndex& index,
     std::vector<uint8_t>& lut_u8
 ) {
-    lut_u8.assign(index.M * index.Ks, 0);
+    const size_t total = index.M * index.Ks;
+    lut_u8.assign(total, 0);
 
-    for (size_t m = 0; m < index.M; ++m) {
-        float mn = lut_float[m * index.Ks];
-        float mx = lut_float[m * index.Ks];
+    float mn = std::numeric_limits<float>::max();
+    float mx = -std::numeric_limits<float>::max();
 
-        for (size_t c = 1; c < index.Ks; ++c) {
-            float v = lut_float[m * index.Ks + c];
-            if (v < mn) mn = v;
-            if (v > mx) mx = v;
-        }
+    for (size_t i = 0; i < total; ++i) {
+        float v = lut_float[i];
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
+    }
 
-        float range = mx - mn;
+    float range = mx - mn;
 
-        if (range < 1e-12f) {
-            for (size_t c = 0; c < index.Ks; ++c) {
-                lut_u8[m * index.Ks + c] = 0;
-            }
-        } else {
-            float scale = 255.0f / range;
+    if (range < 1e-12f) {
+        return;
+    }
 
-            for (size_t c = 0; c < index.Ks; ++c) {
-                float v = lut_float[m * index.Ks + c];
-                int q = static_cast<int>(std::round((v - mn) * scale));
+    float scale = 255.0f / range;
 
-                if (q < 0) q = 0;
-                if (q > 255) q = 255;
+    for (size_t i = 0; i < total; ++i) {
+        int q = static_cast<int>(std::round((lut_float[i] - mn) * scale));
 
-                lut_u8[m * index.Ks + c] = static_cast<uint8_t>(q);
-            }
-        }
+        if (q < 0) q = 0;
+        if (q > 255) q = 255;
+
+        lut_u8[i] = static_cast<uint8_t>(q);
     }
 }
 
@@ -421,11 +417,8 @@ pq_fastscan_search_rerank(
 
     typedef std::pair<uint16_t, uint32_t> CoarseItem;
 
-    std::priority_queue<
-        CoarseItem,
-        std::vector<CoarseItem>,
-        std::greater<CoarseItem>
-    > coarse;
+    std::vector<CoarseItem> coarse_items;
+    coarse_items.reserve(index.base_number);
 
     uint16_t scores[16];
 
@@ -439,22 +432,32 @@ pq_fastscan_search_rerank(
                 break;
             }
 
-            CoarseItem item(scores[lane], static_cast<uint32_t>(id));
-
-            if (coarse.size() < p) {
-                coarse.push(item);
-            } else if (item.first > coarse.top().first) {
-                coarse.pop();
-                coarse.push(item);
-            }
+            coarse_items.push_back(
+                CoarseItem(scores[lane], static_cast<uint32_t>(id))
+            );
         }
+    }
+
+    if (p < coarse_items.size()) {
+        std::nth_element(
+            coarse_items.begin(),
+            coarse_items.begin() + p,
+            coarse_items.end(),
+            [](const CoarseItem& a, const CoarseItem& b) {
+                if (a.first != b.first) {
+                    return a.first > b.first;
+                }
+                return a.second < b.second;
+            }
+        );
+
+        coarse_items.resize(p);
     }
 
     std::priority_queue<std::pair<float, uint32_t> > result;
 
-    while (!coarse.empty()) {
-        uint32_t id = coarse.top().second;
-        coarse.pop();
+    for (const auto& item : coarse_items) {
+        uint32_t id = item.second;
 
         const float* base_vec = base + static_cast<size_t>(id) * index.vecdim;
         float ip = inner_product_opt(base_vec, query, index.vecdim);
