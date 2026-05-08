@@ -1,0 +1,21 @@
+[1] 16:40:25 [SUCCESS] master_ubss2
+
+Authorized users only. All activities may be monitored and reported.
+
+Authorized users only. All activities may be monitored and reported.
+[1] 16:40:26 [SUCCESS] master_ubss2
+load data /anndata/DEEP100K.query.fbin
+dimension: 96  number:10000  size_per_element:4
+load data /anndata/DEEP100K.gt.query.100k.top100.bin
+dimension: 100  number:10000  size_per_element:4
+load data /anndata/DEEP100K.base.100k.fbin
+dimension: 96  number:100000  size_per_element:4
+[PERF] hardware counter results
+[PERF] cycles: 58990562738
+[PERF] instructions: 23439989421
+[PERF] cache_references: 11021316388
+[PERF] cache_misses: 299999111
+[PERF] branch_instructions: unavailable, errno=2
+[PERF] branch_misses: 770372
+[PERF] IPC: 0.397352
+[PERF] cache_miss_rate: 0.0272199
