@@ -12,8 +12,8 @@
 #include "hnswlib/hnswlib/hnswlib.h"
 #include "flat_scan.h"
 // 可以自行添加需要的头文件
-#include "ann_opt.h"
-#include "ann_sq.h"
+// #include "ann_opt.h"
+// #include "ann_sq.h"
 #include "ann_pq_fastscan.h"
 
 using namespace hnswlib;
@@ -95,8 +95,8 @@ int main(int argc, char *argv[])
 
     // SQ-SIMD: build quantized base index before query loop.
     // This is an offline preprocessing step and is not included in per-query latency.
-    SQIndex sq_index = build_sq_index(base, base_number, vecdim);
-    const size_t sq_p = 100;
+    // SQIndex sq_index = build_sq_index(base, base_number, vecdim);
+    // const size_t sq_p = 100;
 
     // 如果你需要保存索引，可以在这里添加你需要的函数，你可以将下面的注释删除来查看pbs是否将build.index返回到你的files目录中
     // 要保存的目录必须是files/*
