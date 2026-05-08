@@ -13,6 +13,7 @@
 #include "flat_scan.h"
 // 可以自行添加需要的头文件
 #include "ann_opt.h"
+#include "ann_sq.h"
 
 using namespace hnswlib;
 
@@ -79,6 +80,11 @@ int main(int argc, char *argv[])
     std::vector<SearchResult> results;
     results.resize(test_number);
 
+    // SQ-SIMD: build quantized base index before query loop.
+    // This is an offline preprocessing step and is not included in per-query latency.
+    SQIndex sq_index = build_sq_index(base, base_number, vecdim);
+    const size_t sq_p = 100;
+
     // 如果你需要保存索引，可以在这里添加你需要的函数，你可以将下面的注释删除来查看pbs是否将build.index返回到你的files目录中
     // 要保存的目录必须是files/*
     // 每个人的目录空间有限，不需要的索引请及时删除，避免占空间太大
@@ -95,7 +101,8 @@ int main(int argc, char *argv[])
 
         // 该文件已有代码中你只能修改该函数的调用方式
         // 可以任意修改函数名，函数参数或者改为调用成员函数，但是不能修改函数返回值。
-        auto res = flat_search_opt(base, test_query + i*vecdim, base_number, vecdim, k);
+        // auto res = flat_search_opt(base, test_query + i*vecdim, base_number, vecdim, k);
+        auto res = sq_search_rerank(base, test_query + i*vecdim, sq_index, k, sq_p);
 
         struct timeval newVal;
         ret = gettimeofday(&newVal, NULL);
