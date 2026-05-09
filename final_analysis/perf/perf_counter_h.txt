@@ -1,0 +1,156 @@
+#pragma once
+
+#ifdef __linux__
+
+#include <linux/perf_event.h>
+#include <sys/ioctl.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
+#include <iostream>
+#include <vector>
+
+struct PerfItem {
+    const char* name;
+    unsigned long long config;
+    int fd;
+    long long value;
+    int err;
+
+    PerfItem(const char* n, unsigned long long c)
+        : name(n), config(c), fd(-1), value(0), err(0) {}
+};
+
+class PerfCounter {
+private:
+    std::vector<PerfItem> items;
+
+    static int open_hw_event(unsigned long long config) {
+        struct perf_event_attr pe;
+        std::memset(&pe, 0, sizeof(pe));
+
+        pe.type = PERF_TYPE_HARDWARE;
+        pe.size = sizeof(pe);
+        pe.config = config;
+        pe.disabled = 1;
+        pe.exclude_kernel = 1;
+        pe.exclude_hv = 1;
+
+        return static_cast<int>(
+            syscall(__NR_perf_event_open, &pe, 0, -1, -1, 0)
+        );
+    }
+
+public:
+    PerfCounter() {
+        items.emplace_back("cycles", PERF_COUNT_HW_CPU_CYCLES);
+        items.emplace_back("instructions", PERF_COUNT_HW_INSTRUCTIONS);
+        items.emplace_back("cache_references", PERF_COUNT_HW_CACHE_REFERENCES);
+        items.emplace_back("cache_misses", PERF_COUNT_HW_CACHE_MISSES);
+        items.emplace_back("branch_instructions", PERF_COUNT_HW_BRANCH_INSTRUCTIONS);
+        items.emplace_back("branch_misses", PERF_COUNT_HW_BRANCH_MISSES);
+    }
+
+    void open_all() {
+        for (auto& item : items) {
+            item.fd = open_hw_event(item.config);
+            if (item.fd == -1) {
+                item.err = errno;
+            }
+        }
+    }
+
+    void start() {
+        for (auto& item : items) {
+            if (item.fd != -1) {
+                ioctl(item.fd, PERF_EVENT_IOC_RESET, 0);
+                ioctl(item.fd, PERF_EVENT_IOC_ENABLE, 0);
+            }
+        }
+    }
+
+    void stop() {
+        for (auto& item : items) {
+            if (item.fd != -1) {
+                ioctl(item.fd, PERF_EVENT_IOC_DISABLE, 0);
+                long long val = 0;
+                if (read(item.fd, &val, sizeof(long long)) == sizeof(long long)) {
+                    item.value = val;
+                }
+            }
+        }
+    }
+
+    void print(std::ostream& os) {
+        os << "[PERF] hardware counter results\n";
+
+        bool has_any = false;
+        long long cycles = 0;
+        long long instructions = 0;
+        long long cache_refs = 0;
+        long long cache_misses = 0;
+
+        for (const auto& item : items) {
+            if (item.fd != -1) {
+                has_any = true;
+                os << "[PERF] " << item.name << ": " << item.value << "\n";
+
+                if (std::strcmp(item.name, "cycles") == 0) {
+                    cycles = item.value;
+                } else if (std::strcmp(item.name, "instructions") == 0) {
+                    instructions = item.value;
+                } else if (std::strcmp(item.name, "cache_references") == 0) {
+                    cache_refs = item.value;
+                } else if (std::strcmp(item.name, "cache_misses") == 0) {
+                    cache_misses = item.value;
+                }
+            } else {
+                os << "[PERF] " << item.name
+                   << ": unavailable, errno=" << item.err
+                   << "\n";
+            }
+        }
+
+        if (instructions > 0 && cycles > 0) {
+            os << "[PERF] IPC: "
+               << static_cast<double>(instructions) / static_cast<double>(cycles)
+               << "\n";
+        }
+
+        if (cache_refs > 0 && cache_misses >= 0) {
+            os << "[PERF] cache_miss_rate: "
+               << static_cast<double>(cache_misses) / static_cast<double>(cache_refs)
+               << "\n";
+        }
+
+        if (!has_any) {
+            os << "[PERF] no hardware counters available under current permission.\n";
+        }
+    }
+
+    ~PerfCounter() {
+        for (auto& item : items) {
+            if (item.fd != -1) {
+                close(item.fd);
+                item.fd = -1;
+            }
+        }
+    }
+};
+
+#else
+
+#include <iostream>
+
+class PerfCounter {
+public:
+    void open_all() {}
+    void start() {}
+    void stop() {}
+    void print(std::ostream& os) {
+        os << "[PERF] unsupported platform\n";
+    }
+};
+
+#endif

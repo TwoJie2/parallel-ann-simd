@@ -1,0 +1,32 @@
+diff --git a/main.cc b/main.cc
+index 7493426..770f5d6 100755
+--- a/main.cc
++++ b/main.cc
+@@ -15,6 +15,7 @@
+ // #include "ann_opt.h"
+ // #include "ann_sq.h"
+ #include "ann_pq_fastscan.h"
++#include "perf_counter.h"
+ 
+ using namespace hnswlib;
+ 
+@@ -93,6 +94,9 @@ int main(int argc, char *argv[])
+ 
+     const size_t pqfs_p = 1500;
+ 
++    PerfCounter perf_counter;
++    perf_counter.open_all();
++    perf_counter.start();
+     // SQ-SIMD: build quantized base index before query loop.
+     // This is an offline preprocessing step and is not included in per-query latency.
+     // SQIndex sq_index = build_sq_index(base, base_number, vecdim);
+@@ -146,6 +150,9 @@ int main(int argc, char *argv[])
+         results[i] = {recall, diff};
+     }
+ 
++    perf_counter.stop();
++    perf_counter.print(std::cerr);
++
+     float avg_recall = 0, avg_latency = 0;
+     for(int i = 0; i < test_number; ++i) {
+         avg_recall += results[i].recall;

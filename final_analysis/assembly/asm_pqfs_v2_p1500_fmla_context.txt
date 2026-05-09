@@ -1,0 +1,96 @@
+4690-	.p2align 3,,7
+4691-.L748:
+4692-	movi	v0.4s, 0
+4693-	cbz	x4, .L746
+4694-	mul	x6, x4, x8
+4695-	mov	x1, 0
+4696-	ldr	x5, [sp, 592]
+4697-	.p2align 3,,7
+4698-.L747:
+4699-	add	x0, x6, x1
+4700-	ldr	s2, [x7, x1, lsl 2]
+4701-	add	x1, x1, 1
+4702-	madd	x0, x0, x2, x3
+4703-	lsl	x0, x0, 2
+4704-	ldr	q1, [x5, x0]
+4705:	fmla	v0.4s, v1.4s, v2.s[0]
+4706-	cmp	x4, x1
+4707-	bhi	.L747
+4708-.L746:
+4709-	madd	x0, x8, x2, x3
+4710-	add	x3, x3, 4
+4711-	ldr	x1, [sp, 328]
+4712-	lsl	x0, x0, 2
+4713-	str	q0, [x1, x0]
+4714-	ldr	x2, [sp, 520]
+4715-	cmp	x2, x3
+4716-	bls	.L1143
+4717-	ldr	x4, [sp, 528]
+4718-	b	.L748
+4719-	.p2align 2,,3
+4720-.L980:
+4721-	.cfi_restore 74
+4722-	fmov	s1, s0
+4723-	mov	x8, x0
+4724-	b	.L695
+4725-.L701:
+4726-	cmp	x26, 0
+4727-	mov	x8, x27
+4728-	ccmp	x25, 1, 0, ne
+4729-	bls	.L706
+4730-	udiv	x0, x10, x25
+4731-	msub	x0, x0, x25, x10
+4732-	mul	x0, x0, x26
+4733-	udiv	x0, x0, x25
+4734-	madd	x8, x20, x0, x27
+4735-	cmp	x26, x0
+--
+4980-	mov	v2.16b, v1.16b
+4981-	mov	v3.16b, v1.16b
+4982-	mov	v0.16b, v1.16b
+4983-	b	.L823
+4984-	.p2align 2,,3
+4985-.L950:
+4986-	mov	x0, x3
+4987-.L823:
+4988-	ldp	q18, q16, [x2, -48]
+4989-	add	x3, x0, 16
+4990-	ldr	q6, [x2, -16]
+4991-	ldp	q19, q17, [x1]
+4992-	ldp	q7, q5, [x1, 32]
+4993-	add	x1, x1, 64
+4994-	ldr	q4, [x2], 64
+4995:	fmla	v0.4s, v19.4s, v18.4s
+4996:	fmla	v3.4s, v17.4s, v16.4s
+4997:	fmla	v2.4s, v7.4s, v6.4s
+4998:	fmla	v1.4s, v5.4s, v4.4s
+4999-	cmp	x4, x3
+5000-	bcs	.L950
+5001-	fadd	v0.4s, v0.4s, v3.4s
+5002-	fadd	v2.4s, v2.4s, v1.4s
+5003-	fadd	v0.4s, v0.4s, v2.4s
+5004-.L822:
+5005-	add	x1, sp, 320
+5006-	str	q0, [x26]
+5007-	ldp	s0, s3, [x1, -8]
+5008-	ldp	s2, s1, [x1]
+5009-	fadd	s0, s0, s3
+5010-	fadd	s0, s0, s2
+5011-	fadd	s0, s0, s1
+5012-	cmp	x4, x0
+5013-	bls	.L824
+5014-	.p2align 3,,7
+5015-.L825:
+5016-	ldr	s2, [x5, x0, lsl 2]
+5017-	ldr	s1, [x21, x0, lsl 2]
+5018-	add	x0, x0, 1
+5019-	fmadd	s0, s2, s1, s0
+5020-	cmp	x4, x0
+5021-	bne	.L825
+5022-.L824:
+5023-	ldp	x0, x1, [sp, 432]
+5024-	fsub	s2, s10, s0
+5025-	sub	x2, x1, x0
+5026-	cmp	x2, 72
+5027-	bls	.L1147
+5028-	ldr	s0, [x0]
