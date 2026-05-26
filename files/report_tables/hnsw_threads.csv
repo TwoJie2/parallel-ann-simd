@@ -1,0 +1,10 @@
+algorithm,backend,threads,nlist,nprobe_or_ef,p,recall,latency_us,speedup_vs_hnsw_ef80
+hnsw,serial,1,0,80,100,0.98515,393.966,1.00
+hnsw_batch_omp,openmp_query_batch,1,0,80,100,0.98515,401.664,0.98
+hnsw_batch_omp,openmp_query_batch,2,0,80,100,0.98515,185.531,2.12
+hnsw_batch_omp,openmp_query_batch,4,0,80,100,0.98515,95.184,4.14
+hnsw_batch_omp,openmp_query_batch,8,0,80,100,0.98515,50.166,7.85
+hnsw_batch_pthread,pthread_query_batch,1,0,80,100,0.98515,393.683,1.00
+hnsw_batch_pthread,pthread_query_batch,2,0,80,100,0.98515,187.842,2.10
+hnsw_batch_pthread,pthread_query_batch,4,0,80,100,0.98515,103.655,3.80
+hnsw_batch_pthread,pthread_query_batch,8,0,80,100,0.98515,82.138,4.80

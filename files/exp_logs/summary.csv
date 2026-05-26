@@ -1,0 +1,81 @@
+run_id,mode,algorithm,backend,threads,base_n,query_n,k,nlist,nprobe,p,recall,latency_us,speedup,build_ms,notes
+20260524_203900,official,pqfs,serial,8,100000,2000,10,0,0,1500,0.9603,1790.0845,0,371.993,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260524_204521,official,pqfs_omp,openmp,8,100000,2000,10,0,0,1500,0.9603,2088.246,0,372.964,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260524_204657,official,pqfs_pthread,pthread,8,100000,2000,10,0,0,1500,0.9603,2048.3825,0,377.589,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260524_210109,official,pqfs_batch_omp,openmp_query_batch,8,100000,2000,10,0,0,1500,0.9603,237.287,0,388.627,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_210134,official,pqfs_batch_pthread,pthread_query_batch,8,100000,2000,10,0,0,1500,0.9603,242.2845,0,385.865,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215249,official,pqfs_batch_omp,openmp_query_batch,1,100000,2000,10,0,0,1500,0.9603,1783.2205,0,395.951,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215310,official,pqfs_batch_omp,openmp_query_batch,2,100000,2000,10,0,0,1500,0.9603,876.8025,0,380.523,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215326,official,pqfs_batch_omp,openmp_query_batch,4,100000,2000,10,0,0,1500,0.9603,446.6125,0,403.976,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215342,official,pqfs_batch_omp,openmp_query_batch,8,100000,2000,10,0,0,1500,0.9603,310.5875,0,379.936,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215358,official,pqfs_batch_pthread,pthread_query_batch,1,100000,2000,10,0,0,1500,0.9603,1773.1185,0,385.942,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215420,official,pqfs_batch_pthread,pthread_query_batch,2,100000,2000,10,0,0,1500,0.9603,875.9845,0,381.8,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215436,official,pqfs_batch_pthread,pthread_query_batch,4,100000,2000,10,0,0,1500,0.9603,436.189,0,384.244,phase1-3b: query-level batch parallel; wall_time_per_query
+20260524_215451,official,pqfs_batch_pthread,pthread_query_batch,8,100000,2000,10,0,0,1500,0.9603,329.4365,0,403.522,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_161723,official,flat,serial,1,100000,2000,10,0,0,1500,0.99995,7609.6425,0,388.159,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_161754,official,flat_omp,openmp,1,100000,2000,10,0,0,1500,0.99995,6436.4425,0,385.387,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_161825,official,flat_omp,openmp,2,100000,2000,10,0,0,1500,0.99995,3774.357,0,383.492,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_161851,official,flat_omp,openmp,4,100000,2000,10,0,0,1500,0.99995,2074.501,0,389.832,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_161912,official,flat_omp,openmp,8,100000,2000,10,0,0,1500,0.99995,1064.753,0,390.372,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_161929,official,flat_pthread,pthread,1,100000,2000,10,0,0,1500,0.99995,5768.487,0,387.57,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_161955,official,flat_pthread,pthread,2,100000,2000,10,0,0,1500,0.99995,3517.225,0,385.372,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_162016,official,flat_pthread,pthread,4,100000,2000,10,0,0,1500,0.99995,2027.3845,0,383.762,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_162037,official,flat_pthread,pthread,8,100000,2000,10,0,0,1500,0.99995,2186.1485,0,391.338,phase1-3: logging + Flat-SIMD MT + PQFastScan MT
+20260525_162059,official,flat_batch_omp,openmp_query_batch,1,100000,2000,10,0,0,1500,0.99995,6505.3545,0,390.972,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_162130,official,flat_batch_omp,openmp_query_batch,2,100000,2000,10,0,0,1500,0.99995,4415.4415,0,385.418,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_162156,official,flat_batch_omp,openmp_query_batch,4,100000,2000,10,0,0,1500,0.99995,1844.569,0,385.721,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_162217,official,flat_batch_omp,openmp_query_batch,8,100000,2000,10,0,0,1500,0.99995,888.913,0,389.045,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_162234,official,flat_batch_pthread,pthread_query_batch,1,100000,2000,10,0,0,1500,0.99995,6717.0535,0,390.709,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_162305,official,flat_batch_pthread,pthread_query_batch,2,100000,2000,10,0,0,1500,0.99995,3500.3915,0,390.294,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_162326,official,flat_batch_pthread,pthread_query_batch,4,100000,2000,10,0,0,1500,0.99995,2448.0615,0,395.817,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_162347,official,flat_batch_pthread,pthread_query_batch,8,100000,2000,10,0,0,1500,0.99995,1199.387,0,388.845,phase1-3b: query-level batch parallel; wall_time_per_query
+20260525_170537,local,ivf,serial,1,2000,50,10,32,8,1500,0.52400001,30.42,0,9.96,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_170604,official,ivf,serial,1,100000,2000,10,128,8,1500,0.93785,966.636,0,894.517,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_170626,official,ivf,serial,1,100000,2000,10,128,16,1500,0.97975,2194.418,0,885.544,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_170649,official,ivf,serial,1,100000,2000,10,128,32,1500,0.9952,4521.4785,0,884.566,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_170716,official,ivf,serial,1,100000,2000,10,128,64,1500,0.99915,8265.139,0,885.24,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_172023,official,ivf,serial,1,100000,2000,10,128,32,1500,0.9952,3597.7295,0,888.722,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_172050,official,ivf_omp,openmp,1,100000,2000,10,128,32,1500,0.9952,3208.391,0,886.29,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_172112,official,ivf_omp,openmp,2,100000,2000,10,128,32,1500,0.9952,2641.3375,0,896.353,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_172134,official,ivf_omp,openmp,4,100000,2000,10,128,32,1500,0.9952,1176.2185,0,893.984,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_172156,official,ivf_omp,openmp,8,100000,2000,10,128,32,1500,0.9952,909.7725,0,895.058,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_172219,official,ivf_pthread,pthread,1,100000,2000,10,128,32,1500,0.9952,5654.6095,0,899.925,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_172246,official,ivf_pthread,pthread,2,100000,2000,10,128,32,1500,0.9952,3255.4045,0,896.147,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_173751,official,ivf_pthread,pthread,4,100000,2000,10,128,32,1500,0.9952,2296.0545,0,886.443,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_173812,official,ivf_pthread,pthread,8,100000,2000,10,128,32,1500,0.9952,1985.937,0,883.526,phase3-4: IVF-SIMD baseline + IVF MT
+20260525_173832,official,ivf_batch_omp,openmp_query_batch,1,100000,2000,10,128,32,1500,0.9952,3343.9715,0,888.676,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_173857,official,ivf_batch_omp,openmp_query_batch,2,100000,2000,10,128,32,1500,0.9952,3048.81,0,998.232,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_173917,official,ivf_batch_omp,openmp_query_batch,4,100000,2000,10,128,32,1500,0.9952,1408.763,0,890.625,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_173938,official,ivf_batch_omp,openmp_query_batch,8,100000,2000,10,128,32,1500,0.9952,748.2355,0,893.309,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_173953,official,ivf_batch_pthread,pthread_query_batch,1,100000,2000,10,128,32,1500,0.9952,3413.0665,0,906.89,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_174019,official,ivf_batch_pthread,pthread_query_batch,2,100000,2000,10,128,32,1500,0.9952,3280.259,0,887.06,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_174040,official,ivf_batch_pthread,pthread_query_batch,4,100000,2000,10,128,32,1500,0.9952,1705.749,0,900.09,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_174100,official,ivf_batch_pthread,pthread_query_batch,8,100000,2000,10,128,32,1500,0.9952,924.4165,0,889.368,phase3-4: IVF query-level batch parallel; wall_time_per_query
+20260525_181533,official,ivfpq,serial,1,100000,2000,10,128,32,1500,0.9609,1585.711,0,1288.258,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181555,official,ivfpq_omp,openmp,1,100000,2000,10,128,32,1500,0.9609,2029.6905,0,1293.186,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181616,official,ivfpq_omp,openmp,2,100000,2000,10,128,32,1500,0.9609,1098.0735,0,1288.031,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181637,official,ivfpq_omp,openmp,4,100000,2000,10,128,32,1500,0.9609,782.345,0,1298.529,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181659,official,ivfpq_omp,openmp,8,100000,2000,10,128,32,1500,0.9609,585.651,0,1295.908,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181714,official,ivfpq_pthread,pthread,1,100000,2000,10,128,32,1500,0.9609,2144.7745,0,1289.816,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181736,official,ivfpq_pthread,pthread,2,100000,2000,10,128,32,1500,0.9609,1492.082,0,1284.929,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181756,official,ivfpq_pthread,pthread,4,100000,2000,10,128,32,1500,0.9609,1102.8635,0,1267.019,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181818,official,ivfpq_pthread,pthread,8,100000,2000,10,128,32,1500,0.9609,1430.7435,0,1296.313,phase5: IVF-PQ baseline + IVF-PQ MT
+20260525_181839,official,ivfpq_batch_omp,openmp_query_batch,1,100000,2000,10,128,32,1500,0.9609,1832.262,0,1274.51,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_181859,official,ivfpq_batch_omp,openmp_query_batch,2,100000,2000,10,128,32,1500,0.9609,905.064,0,1278.954,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_181921,official,ivfpq_batch_omp,openmp_query_batch,4,100000,2000,10,128,32,1500,0.9609,492.715,0,1279.557,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_181938,official,ivfpq_batch_omp,openmp_query_batch,8,100000,2000,10,128,32,1500,0.9609,270.385,0,1291.097,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_181953,official,ivfpq_batch_pthread,pthread_query_batch,1,100000,2000,10,128,32,1500,0.9609,1740.5555,0,1281.236,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_182014,official,ivfpq_batch_pthread,pthread_query_batch,2,100000,2000,10,128,32,1500,0.9609,892.33,0,1280.638,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_182036,official,ivfpq_batch_pthread,pthread_query_batch,4,100000,2000,10,128,32,1500,0.9609,532.094,0,1276.383,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_182058,official,ivfpq_batch_pthread,pthread_query_batch,8,100000,2000,10,128,32,1500,0.9609,302.693,0,1286.384,phase5: IVF-PQ query-level batch parallel; wall_time_per_query
+20260525_201031,official,hnsw,serial,1,100000,2000,10,0,40,100,0.95645,214.235,0,45289.394,phase6: HNSW baseline; M=16; efConstruction=100; efSearch=40; loaded=no
+20260525_201133,official,hnsw,serial,1,100000,2000,10,0,80,100,0.98515,393.966,0,517.695,phase6: HNSW baseline; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201150,official,hnsw,serial,1,100000,2000,10,0,120,100,0.9922,529.8475,0,523.14,phase6: HNSW baseline; M=16; efConstruction=100; efSearch=120; loaded=yes
+20260525_201206,official,hnsw_batch_omp,openmp_query_batch,1,100000,2000,10,0,80,100,0.98515,401.664,0,509.18,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201223,official,hnsw_batch_omp,openmp_query_batch,2,100000,2000,10,0,80,100,0.98515,185.5315,0,519.93,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201240,official,hnsw_batch_omp,openmp_query_batch,4,100000,2000,10,0,80,100,0.98515,95.184,0,522.464,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201257,official,hnsw_batch_omp,openmp_query_batch,8,100000,2000,10,0,80,100,0.98515,50.1665,0,518.791,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201314,official,hnsw_batch_pthread,pthread_query_batch,1,100000,2000,10,0,80,100,0.98515,393.6825,0,517.6,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201331,official,hnsw_batch_pthread,pthread_query_batch,2,100000,2000,10,0,80,100,0.98515,187.842,0,523.801,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201348,official,hnsw_batch_pthread,pthread_query_batch,4,100000,2000,10,0,80,100,0.98515,103.655,0,519.954,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260525_201406,official,hnsw_batch_pthread,pthread_query_batch,8,100000,2000,10,0,80,100,0.98515,82.138,0,521.075,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes

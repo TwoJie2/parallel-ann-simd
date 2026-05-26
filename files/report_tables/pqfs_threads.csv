@@ -1,0 +1,12 @@
+algorithm,backend,threads,nlist,nprobe_or_ef,p,recall,latency_us,speedup_vs_pqfs
+pqfs,serial,8,0,0,1500,0.96030,1790.084,1.00
+pqfs_batch_omp,openmp_query_batch,1,0,0,1500,0.96030,1783.220,1.00
+pqfs_batch_omp,openmp_query_batch,2,0,0,1500,0.96030,876.803,2.04
+pqfs_batch_omp,openmp_query_batch,4,0,0,1500,0.96030,446.613,4.01
+pqfs_batch_omp,openmp_query_batch,8,0,0,1500,0.96030,310.587,5.76
+pqfs_batch_pthread,pthread_query_batch,1,0,0,1500,0.96030,1773.119,1.01
+pqfs_batch_pthread,pthread_query_batch,2,0,0,1500,0.96030,875.985,2.04
+pqfs_batch_pthread,pthread_query_batch,4,0,0,1500,0.96030,436.189,4.10
+pqfs_batch_pthread,pthread_query_batch,8,0,0,1500,0.96030,329.437,5.43
+pqfs_omp,openmp,8,0,0,1500,0.96030,2088.246,0.86
+pqfs_pthread,pthread,8,0,0,1500,0.96030,2048.383,0.87

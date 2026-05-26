@@ -1,0 +1,4 @@
+efSearch,recall,latency_us,build_or_load_ms,notes
+40,0.95645,214.235,45289.394,phase6: HNSW baseline; M=16; efConstruction=100; efSearch=40; loaded=no
+80,0.98515,393.966,517.695,phase6: HNSW baseline; M=16; efConstruction=100; efSearch=80; loaded=yes
+120,0.99220,529.847,523.140,phase6: HNSW baseline; M=16; efConstruction=100; efSearch=120; loaded=yes

@@ -1,0 +1,5 @@
+nlist,nprobe,recall,latency_us,build_ms,notes
+128,8,0.93785,966.636,894.517,phase3-4: IVF-SIMD baseline + IVF MT
+128,16,0.97975,2194.418,885.544,phase3-4: IVF-SIMD baseline + IVF MT
+128,32,0.99520,3597.729,888.722,phase3-4: IVF-SIMD baseline + IVF MT
+128,64,0.99915,8265.139,885.240,phase3-4: IVF-SIMD baseline + IVF MT
