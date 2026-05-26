@@ -79,3 +79,4 @@ run_id,mode,algorithm,backend,threads,base_n,query_n,k,nlist,nprobe,p,recall,lat
 20260525_201331,official,hnsw_batch_pthread,pthread_query_batch,2,100000,2000,10,0,80,100,0.98515,187.842,0,523.801,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
 20260525_201348,official,hnsw_batch_pthread,pthread_query_batch,4,100000,2000,10,0,80,100,0.98515,103.655,0,519.954,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
 20260525_201406,official,hnsw_batch_pthread,pthread_query_batch,8,100000,2000,10,0,80,100,0.98515,82.138,0,521.075,phase6: HNSW query-level batch parallel; wall_time_per_query; M=16; efConstruction=100; efSearch=80; loaded=yes
+20260526_204234,official,ivfpq_batch_omp,openmp_query_batch,8,100000,2000,10,128,32,1500,0.9609,534.0345,0,1451.197,phase5: IVF-PQ query-level batch parallel; wall_time_per_query

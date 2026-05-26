@@ -1,0 +1,32 @@
+# build outputs
+main
+main.exe
+main_local.exe
+*.o
+*.out
+*.exe
+
+# runtime temporary outputs
+test.o
+test.e
+*.log
+
+# archives
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# generated indexes and profiling logs
+files/indexes/
+files/perf_logs/
+
+# raw per-run PBS logs; keep summary.csv instead
+files/exp_logs/*.test.o
+files/exp_logs/*.test.e
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/

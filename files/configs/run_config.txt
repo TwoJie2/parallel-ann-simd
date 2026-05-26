@@ -1,4 +1,4 @@
-ANN_ALGO=hnsw_batch_pthread
+ANN_ALGO=ivfpq_batch_omp
 ANN_THREADS=8
 ANN_P=1500
 ANN_NLIST=128
