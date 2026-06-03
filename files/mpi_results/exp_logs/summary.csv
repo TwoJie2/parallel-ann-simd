@@ -1,0 +1,2 @@
+run_id,mode,algorithm,backend,threads,base_n,query_n,k,nlist,nprobe,p,recall,latency_us,speedup,build_ms,notes
+20260602_194558,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.99645,418.125,0,222.255,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=45.819402; base_sharded=yes

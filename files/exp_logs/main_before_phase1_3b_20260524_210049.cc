@@ -12,12 +12,8 @@
 #include <cstdlib>
 #include <random>
 #include <algorithm>
-#include <limits>
 #include <map>
 #include <pthread.h>
-#ifdef ANN_ENABLE_MPI
-#include <mpi.h>
-#endif
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -30,12 +26,6 @@
 #include "ann_mt_common.h"
 #include "ann_flat_mt.h"
 #include "ann_pq_fastscan_mt.h"
-#include "ann_ivf.h"
-#include "ann_ivf_mt.h"
-#include "ann_ivfpq.h"
-#include "ann_ivfpq_mt.h"
-#include "ann_hnsw.h"
-#include "ann_mpi_common.h"
 
 using namespace hnswlib;
 
@@ -61,60 +51,6 @@ T *LoadData(std::string data_path, size_t& n, size_t& d)
 
     std::cerr<<"load data "<<data_path<<"\n";
     std::cerr<<"dimension: "<<d<<"  number:"<<n<<"  size_per_element:"<<sizeof(T)<<"\n";
-
-    return data;
-}
-
-template<typename T>
-bool LoadDataInfo(std::string data_path, size_t& n, size_t& d)
-{
-    std::ifstream fin;
-    fin.open(data_path, std::ios::in | std::ios::binary);
-    if (!fin) {
-        std::cerr << "cannot open data file " << data_path << "\n";
-        n = 0;
-        d = 0;
-        return false;
-    }
-
-    fin.read((char*)&n, 4);
-    fin.read((char*)&d, 4);
-    fin.close();
-    return true;
-}
-
-template<typename T>
-T *LoadDataRange(std::string data_path, size_t begin, size_t count, size_t& n, size_t& d)
-{
-    std::ifstream fin;
-    fin.open(data_path, std::ios::in | std::ios::binary);
-    if (!fin) {
-        std::cerr << "cannot open data file " << data_path << "\n";
-        n = 0;
-        d = 0;
-        return NULL;
-    }
-
-    fin.read((char*)&n, 4);
-    fin.read((char*)&d, 4);
-    if (begin > n) begin = n;
-    if (count > n - begin) count = n - begin;
-
-    T* data = new T[count * d];
-    int sz = sizeof(T);
-    std::streamoff offset = static_cast<std::streamoff>(8 + begin * d * static_cast<size_t>(sz));
-    fin.seekg(offset, std::ios::beg);
-    for (size_t i = 0; i < count; ++i) {
-        fin.read(((char*)data + i * d * sz), d * sz);
-    }
-    fin.close();
-
-    std::cerr << "load data shard " << data_path
-              << " begin:" << begin
-              << " count:" << count
-              << " global_number:" << n
-              << " dimension:" << d
-              << " size_per_element:" << sizeof(T) << "\n";
 
     return data;
 }
@@ -186,21 +122,6 @@ static inline size_t cfg_size(
     return ann_env_size(env_name.c_str(), default_value, lo, hi);
 }
 
-static inline bool cfg_flag(
-    const std::map<std::string, std::string>& cfg,
-    const std::string& key,
-    const std::string& env_name,
-    bool default_value
-) {
-    std::map<std::string, std::string>::const_iterator it = cfg.find(key);
-    if (it != cfg.end() && !it->second.empty()) {
-        std::string v = it->second;
-        std::transform(v.begin(), v.end(), v.begin(), ::tolower);
-        return v == "1" || v == "true" || v == "yes" || v == "on";
-    }
-    return ann_env_flag(env_name.c_str(), default_value);
-}
-
 void build_index(float* base, size_t base_number, size_t vecdim)
 {
     const int efConstruction = 150; // 为防止索引构建时间过长，efc建议设置200以下
@@ -229,9 +150,6 @@ static inline std::priority_queue<std::pair<float, uint32_t> > run_one_search(
     size_t k,
     const PQFastScanIndex& pqfs_index,
     size_t pqfs_p,
-    const IVFIndex& ivf_index,
-    size_t ivf_nprobe,
-    const HNSWAnnIndex& hnsw_index,
     size_t threads
 ) {
     if (algorithm == "flat" || algorithm == "flat_simd") {
@@ -248,27 +166,6 @@ static inline std::priority_queue<std::pair<float, uint32_t> > run_one_search(
     }
     if (algorithm == "pqfs_pthread") {
         return pq_fastscan_search_rerank_pthread(base, query, pqfs_index, k, pqfs_p, threads);
-    }
-    if (algorithm == "ivfpq") {
-        return ivfpq_search_rerank(base, query, pqfs_index, ivf_index, k, ivf_nprobe, pqfs_p);
-    }
-    if (algorithm == "ivfpq_omp" || algorithm == "ivfpq_openmp") {
-        return ivfpq_search_rerank_openmp(base, query, pqfs_index, ivf_index, k, ivf_nprobe, pqfs_p, threads);
-    }
-    if (algorithm == "ivfpq_pthread") {
-        return ivfpq_search_rerank_pthread(base, query, pqfs_index, ivf_index, k, ivf_nprobe, pqfs_p, threads);
-    }
-    if (algorithm == "ivf") {
-        return ivf_search(base, query, ivf_index, k, ivf_nprobe);
-    }
-    if (algorithm == "ivf_omp" || algorithm == "ivf_openmp") {
-        return ivf_search_openmp(base, query, ivf_index, k, ivf_nprobe, threads);
-    }
-    if (algorithm == "ivf_pthread") {
-        return ivf_search_pthread(base, query, ivf_index, k, ivf_nprobe, threads);
-    }
-    if (algorithm == "hnsw") {
-        return hnsw_search(hnsw_index, query, k);
     }
 
     // Safe fallback: keep the exact SIMD-stage algorithm as the default baseline.
@@ -306,37 +203,16 @@ static inline bool is_query_batch_algorithm(const std::string& algorithm)
            algorithm == "pqfs_query_omp" ||
            algorithm == "pqfs_batch_pthread" ||
            algorithm == "pqfs_query_pthread" ||
-           algorithm == "ivfpq_batch_omp" ||
-           algorithm == "ivfpq_query_omp" ||
-           algorithm == "ivfpq_batch_pthread" ||
-           algorithm == "ivfpq_query_pthread" ||
            algorithm == "flat_batch_omp" ||
            algorithm == "flat_query_omp" ||
            algorithm == "flat_batch_pthread" ||
-           algorithm == "flat_query_pthread" ||
-           algorithm == "ivf_batch_omp" ||
-           algorithm == "ivf_query_omp" ||
-           algorithm == "ivf_batch_pthread" ||
-           algorithm == "ivf_query_pthread" ||
-           algorithm == "hnsw_batch_omp" ||
-           algorithm == "hnsw_query_omp" ||
-           algorithm == "hnsw_batch_pthread" ||
-           algorithm == "hnsw_query_pthread";
+           algorithm == "flat_query_pthread";
 }
 
 static inline std::string batch_inner_algorithm(const std::string& algorithm)
 {
-    if (algorithm.find("hnsw") == 0) {
-        return "hnsw";
-    }
     if (algorithm.find("flat") == 0) {
         return "flat";
-    }
-    if (algorithm.find("ivfpq") == 0) {
-        return "ivfpq";
-    }
-    if (algorithm.find("ivf") == 0) {
-        return "ivf";
     }
     return "pqfs";
 }
@@ -364,9 +240,6 @@ static inline void run_query_batch_openmp(
     size_t k,
     const PQFastScanIndex& pqfs_index,
     size_t pqfs_p,
-    const IVFIndex& ivf_index,
-    size_t ivf_nprobe,
-    const HNSWAnnIndex& hnsw_index,
     size_t threads,
     std::vector<SearchResult>& results
 ) {
@@ -382,9 +255,6 @@ static inline void run_query_batch_openmp(
             k,
             pqfs_index,
             pqfs_p,
-            ivf_index,
-            ivf_nprobe,
-            hnsw_index,
             1
         );
         float recall = compute_recall_and_consume(res, test_gt, i, test_gt_d, k);
@@ -404,9 +274,6 @@ static inline void run_query_batch_openmp(
             k,
             pqfs_index,
             pqfs_p,
-            ivf_index,
-            ivf_nprobe,
-            hnsw_index,
             1
         );
         float recall = compute_recall_and_consume(res, test_gt, i, test_gt_d, k);
@@ -428,9 +295,6 @@ struct QueryBatchPthreadArg {
     size_t k;
     const PQFastScanIndex* pqfs_index;
     size_t pqfs_p;
-    const IVFIndex* ivf_index;
-    size_t ivf_nprobe;
-    const HNSWAnnIndex* hnsw_index;
     std::vector<SearchResult>* results;
 };
 
@@ -447,9 +311,6 @@ static inline void* query_batch_pthread_worker(void* ptr)
             arg->k,
             *arg->pqfs_index,
             arg->pqfs_p,
-            *arg->ivf_index,
-            arg->ivf_nprobe,
-            *arg->hnsw_index,
             1
         );
         float recall = compute_recall_and_consume(res, arg->test_gt, i, arg->test_gt_d, arg->k);
@@ -470,9 +331,6 @@ static inline void run_query_batch_pthread(
     size_t k,
     const PQFastScanIndex& pqfs_index,
     size_t pqfs_p,
-    const IVFIndex& ivf_index,
-    size_t ivf_nprobe,
-    const HNSWAnnIndex& hnsw_index,
     size_t threads,
     std::vector<SearchResult>& results
 ) {
@@ -494,9 +352,6 @@ static inline void run_query_batch_pthread(
         args[t].k = k;
         args[t].pqfs_index = &pqfs_index;
         args[t].pqfs_p = pqfs_p;
-        args[t].ivf_index = &ivf_index;
-        args[t].ivf_nprobe = ivf_nprobe;
-        args[t].hnsw_index = &hnsw_index;
         args[t].results = &results;
         pthread_create(&handles[t], NULL, query_batch_pthread_worker, &args[t]);
     }
@@ -587,315 +442,7 @@ static void generate_local_data(
     std::cerr << "dimension: " << vecdim << "  base:" << base_number << "  query:" << test_number << "\n";
 }
 
-#ifdef ANN_ENABLE_MPI
-static inline bool is_mpi_ivf_algorithm(const std::string& algorithm)
-{
-    return algorithm == "mpi_ivf" ||
-           algorithm == "mpi_ivf_omp" ||
-           algorithm == "mpi_ivf_openmp" ||
-           algorithm == "mpi_ivf_pthread";
-}
-
-static inline std::string mpi_ivf_backend_name(const std::string& algorithm)
-{
-    if (algorithm.find("omp") != std::string::npos ||
-        algorithm.find("openmp") != std::string::npos) {
-        return "mpi_openmp";
-    }
-    if (algorithm.find("pthread") != std::string::npos) {
-        return "mpi_pthread";
-    }
-    return "mpi";
-}
-
-static inline std::priority_queue<std::pair<float, uint32_t> > run_mpi_local_ivf_search(
-    const std::string& algorithm,
-    float* local_base,
-    float* query,
-    const IVFIndex& local_ivf,
-    size_t k,
-    size_t nprobe,
-    size_t threads
-) {
-    if (algorithm == "mpi_ivf_omp" || algorithm == "mpi_ivf_openmp") {
-        return ivf_search_openmp(local_base, query, local_ivf, k, nprobe, threads);
-    }
-    if (algorithm == "mpi_ivf_pthread") {
-        return ivf_search_pthread(local_base, query, local_ivf, k, nprobe, threads);
-    }
-    return ivf_search(local_base, query, local_ivf, k, nprobe);
-}
-
-static inline void pack_mpi_candidates(
-    const std::vector<AnnMpiCandidate>& candidates,
-    size_t k,
-    std::vector<float>& sendbuf
-) {
-    sendbuf.assign(k * 2, std::numeric_limits<float>::infinity());
-    for (size_t i = 0; i < candidates.size() && i < k; ++i) {
-        sendbuf[i * 2] = candidates[i].distance;
-        sendbuf[i * 2 + 1] = static_cast<float>(candidates[i].id);
-    }
-}
-
-static inline void merge_mpi_candidate_buffer(
-    const std::vector<float>& recvbuf,
-    int world_size,
-    size_t k,
-    std::priority_queue<std::pair<float, uint32_t> >& global
-) {
-    for (int r = 0; r < world_size; ++r) {
-        for (size_t j = 0; j < k; ++j) {
-            size_t off = (static_cast<size_t>(r) * k + j) * 2;
-            float distance = recvbuf[off];
-            if (!std::isfinite(distance)) continue;
-            uint32_t id = static_cast<uint32_t>(recvbuf[off + 1] + 0.5f);
-            ann_mpi_topk_push(global, distance, id, k);
-        }
-    }
-}
-
-static int run_mpi_ann_main(int argc, char *argv[])
-{
-    MPI_Init(&argc, &argv);
-
-    int world_size = 1;
-    int rank = 0;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    const std::string run_id = ann_make_run_id();
-    if (rank == 0) {
-        ann_prepare_mpi_log_dirs();
-        ann_write_mpi_platform_log(run_id);
-    }
-
-    const std::map<std::string, std::string> run_cfg = load_run_config("files/configs/run_config.txt");
-    const bool local_mode = ann_env_flag("ANN_LOCAL", false);
-    const std::string algorithm = cfg_string(run_cfg, "ANN_ALGO", "ANN_ALGO", "mpi_ivf");
-    const size_t threads = cfg_size(run_cfg, "ANN_THREADS", "ANN_THREADS", 1, 1, 64);
-    const size_t pqfs_p = cfg_size(run_cfg, "ANN_P", "ANN_P", 1500, 10, 1000000);
-    const size_t ivf_nlist = cfg_size(run_cfg, "ANN_NLIST", "ANN_NLIST", 128, 1, 4096);
-    const size_t ivf_nprobe = cfg_size(run_cfg, "ANN_NPROBE", "ANN_NPROBE", 32, 1, 4096);
-    const size_t k = 10;
-
-    if (!is_mpi_ivf_algorithm(algorithm)) {
-        if (rank == 0) {
-            std::cerr << "unsupported MPI ANN_ALGO=" << algorithm
-                      << "; use mpi_ivf, mpi_ivf_omp, or mpi_ivf_pthread\n";
-        }
-        MPI_Finalize();
-        return 2;
-    }
-
-#ifdef _OPENMP
-    omp_set_num_threads(static_cast<int>(threads));
-#endif
-
-    size_t test_number = 0, base_number = 0;
-    size_t test_gt_d = 0, vecdim = 0;
-    size_t local_base_number = 0;
-    AnnMpiShard shard = ann_mpi_compute_shard(0, rank, world_size);
-
-    std::vector<float> local_base_holder;
-    std::vector<float> local_query_holder;
-    std::vector<int> local_gt_holder;
-
-    float* test_query = NULL;
-    int* test_gt = NULL;
-    float* local_base = NULL;
-
-    if (local_mode) {
-        generate_local_data(local_base_holder, local_query_holder, local_gt_holder, base_number, test_number, vecdim, test_gt_d);
-        shard = ann_mpi_compute_shard(base_number, rank, world_size);
-        local_base_number = shard.count;
-        local_base = local_base_holder.data() + shard.begin * vecdim;
-        test_query = local_query_holder.data();
-        test_gt = local_gt_holder.data();
-    } else {
-        std::string data_path = "/anndata/";
-        test_query = LoadData<float>(data_path + "DEEP100K.query.fbin", test_number, vecdim);
-        test_gt = LoadData<int>(data_path + "DEEP100K.gt.query.100k.top100.bin", test_number, test_gt_d);
-
-        size_t base_dim = 0;
-        if (!LoadDataInfo<float>(data_path + "DEEP100K.base.100k.fbin", base_number, base_dim)) {
-            if (rank == 0) {
-                std::cerr << "failed to load base metadata; set ANN_LOCAL=1 for local synthetic debugging\n";
-            }
-            delete[] test_query;
-            delete[] test_gt;
-            MPI_Finalize();
-            return 1;
-        }
-
-        if (test_query == NULL || test_gt == NULL || base_dim != vecdim) {
-            if (rank == 0) {
-                std::cerr << "failed to load official query/gt data or dimension mismatch; set ANN_LOCAL=1 for local debugging\n";
-            }
-            delete[] test_query;
-            delete[] test_gt;
-            MPI_Finalize();
-            return 1;
-        }
-
-        shard = ann_mpi_compute_shard(base_number, rank, world_size);
-        local_base_number = shard.count;
-        size_t loaded_base_number = 0, loaded_vecdim = 0;
-        local_base = LoadDataRange<float>(
-            data_path + "DEEP100K.base.100k.fbin",
-            shard.begin,
-            shard.count,
-            loaded_base_number,
-            loaded_vecdim
-        );
-
-        if (local_base == NULL || loaded_base_number != base_number || loaded_vecdim != vecdim) {
-            if (rank == 0) {
-                std::cerr << "failed to load official base shard\n";
-            }
-            delete[] test_query;
-            delete[] test_gt;
-            delete[] local_base;
-            MPI_Finalize();
-            return 1;
-        }
-
-        test_number = 2000;
-    }
-
-    if (rank == 0) {
-        std::cerr << "MPI ANN run: algorithm=" << algorithm
-                  << " np=" << world_size
-                  << " threads=" << threads
-                  << " base=" << base_number
-                  << " query=" << test_number
-                  << " dim=" << vecdim
-                  << " nlist=" << ivf_nlist
-                  << " nprobe=" << ivf_nprobe << "\n";
-    }
-
-    int64_t build_begin = ann_now_us();
-    IVFIndex local_ivf = build_ivf_index(
-        local_base,
-        local_base_number,
-        vecdim,
-        ivf_nlist,
-        local_mode ? std::min<size_t>(2000, local_base_number) : std::min<size_t>(8000, local_base_number),
-        local_mode ? 3 : 4
-    );
-    int64_t build_end = ann_now_us();
-    double local_build_ms = static_cast<double>(build_end - build_begin) / 1000.0;
-    double max_build_ms = 0.0;
-    MPI_Reduce(&local_build_ms, &max_build_ms, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-
-    std::vector<SearchResult> results;
-    if (rank == 0) {
-        results.resize(test_number);
-    }
-
-    const int gather_count = static_cast<int>(k * 2);
-    std::vector<float> sendbuf(k * 2, std::numeric_limits<float>::infinity());
-    std::vector<float> recvbuf;
-    if (rank == 0) {
-        recvbuf.resize(static_cast<size_t>(world_size) * k * 2);
-    }
-
-    double comm_merge_total_us = 0.0;
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    for (size_t i = 0; i < test_number; ++i) {
-        double query_begin = MPI_Wtime();
-        std::priority_queue<std::pair<float, uint32_t> > local_res =
-            run_mpi_local_ivf_search(
-                algorithm,
-                local_base,
-                test_query + i * vecdim,
-                local_ivf,
-                k,
-                ivf_nprobe,
-                threads
-            );
-
-        std::vector<AnnMpiCandidate> candidates = ann_mpi_queue_to_candidates(local_res, k);
-        ann_mpi_offset_candidate_ids(candidates, static_cast<uint32_t>(shard.begin));
-        pack_mpi_candidates(candidates, k, sendbuf);
-
-        double gather_begin = MPI_Wtime();
-        MPI_Gather(
-            sendbuf.data(),
-            gather_count,
-            MPI_FLOAT,
-            rank == 0 ? recvbuf.data() : NULL,
-            gather_count,
-            MPI_FLOAT,
-            0,
-            MPI_COMM_WORLD
-        );
-
-        if (rank == 0) {
-            std::priority_queue<std::pair<float, uint32_t> > global_res;
-            merge_mpi_candidate_buffer(recvbuf, world_size, k, global_res);
-            double query_end = MPI_Wtime();
-            comm_merge_total_us += (query_end - gather_begin) * 1000000.0;
-            float recall = compute_recall_and_consume(global_res, test_gt, i, test_gt_d, k);
-            results[i] = {recall, static_cast<int64_t>((query_end - query_begin) * 1000000.0)};
-        }
-    }
-
-    if (rank == 0) {
-        double avg_recall = 0.0;
-        double avg_latency = 0.0;
-        for (size_t i = 0; i < test_number; ++i) {
-            avg_recall += results[i].recall;
-            avg_latency += results[i].latency;
-        }
-        avg_recall /= static_cast<double>(test_number);
-        avg_latency /= static_cast<double>(test_number);
-        double avg_comm_merge = comm_merge_total_us / static_cast<double>(test_number);
-
-        std::cout << "average recall: " << avg_recall << "\n";
-        std::cout << "average latency (us): " << avg_latency << "\n";
-        std::cout << "average gather+merge (us): " << avg_comm_merge << "\n";
-
-        AnnRunSummary summary;
-        summary.run_id = run_id;
-        summary.mode = local_mode ? "local" : "official";
-        summary.algorithm = algorithm;
-        summary.backend = mpi_ivf_backend_name(algorithm);
-        summary.threads = threads;
-        summary.base_n = base_number;
-        summary.query_n = test_number;
-        summary.k = k;
-        summary.nlist = local_ivf.nlist;
-        summary.nprobe = ivf_nprobe;
-        summary.p = pqfs_p;
-        summary.recall = avg_recall;
-        summary.latency_us = avg_latency;
-        summary.speedup = 0.0;
-        summary.build_ms = max_build_ms;
-
-        std::ostringstream notes;
-        notes << "mpi_ivf: np=" << world_size
-              << "; shard_begin_rank0=" << shard.begin
-              << "; shard_count_rank0=" << shard.count
-              << "; gather_merge_avg_us=" << std::setprecision(8) << avg_comm_merge
-              << "; base_sharded=yes";
-        summary.notes = notes.str();
-        ann_append_mpi_summary_csv(summary);
-    }
-
-    if (!local_mode) {
-        delete[] test_query;
-        delete[] test_gt;
-        delete[] local_base;
-    }
-
-    MPI_Finalize();
-    return 0;
-}
-#endif
-
-static int run_serial_ann_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
@@ -909,19 +456,7 @@ static int run_serial_ann_main(int argc, char *argv[])
     const std::string algorithm = cfg_string(run_cfg, "ANN_ALGO", "ANN_ALGO", "pqfs");
     const size_t threads = cfg_size(run_cfg, "ANN_THREADS", "ANN_THREADS", 8, 1, 64);
     const size_t pqfs_p = cfg_size(run_cfg, "ANN_P", "ANN_P", 1500, 10, 1000000);
-    const size_t ivf_nlist = cfg_size(run_cfg, "ANN_NLIST", "ANN_NLIST", 128, 1, 4096);
-    const size_t ivf_nprobe = cfg_size(run_cfg, "ANN_NPROBE", "ANN_NPROBE", 32, 1, 4096);
-    const size_t hnsw_M = cfg_size(run_cfg, "ANN_HNSW_M", "ANN_HNSW_M", 16, 4, 96);
-    const size_t hnsw_efc = cfg_size(run_cfg, "ANN_HNSW_EFC", "ANN_HNSW_EFC", 100, 20, 2000);
-    const size_t hnsw_ef = cfg_size(run_cfg, "ANN_HNSW_EF", "ANN_HNSW_EF", 80, 10, 2000);
-    const bool hnsw_rebuild = cfg_flag(run_cfg, "ANN_HNSW_REBUILD", "ANN_HNSW_REBUILD", false);
     const size_t k = 10;
-
-    if (algorithm.find("mpi_") == 0) {
-        std::cerr << "ANN_ALGO=" << algorithm
-                  << " requires compiling with mpic++ and -DANN_ENABLE_MPI\n";
-        return 2;
-    }
 
 #ifdef _OPENMP
     omp_set_num_threads(static_cast<int>(threads));
@@ -961,50 +496,16 @@ static int run_serial_ann_main(int argc, char *argv[])
     std::vector<SearchResult> results;
     results.resize(test_number);
 
-    bool needs_hnsw = (algorithm.find("hnsw") != std::string::npos);
-    bool needs_pqfs = (algorithm.find("pqfs") != std::string::npos || algorithm.find("ivfpq") != std::string::npos);
-    bool needs_ivf = (!needs_hnsw && algorithm.find("ivf") != std::string::npos);
-
     int64_t build_begin = ann_now_us();
-
-    PQFastScanIndex pqfs_index = PQFastScanIndex();
-    if (needs_pqfs || (!needs_ivf && algorithm.find("flat") == std::string::npos)) {
-        pqfs_index = build_pq_fastscan_index(
-            base,
-            base_number,
-            vecdim,
-            12,
-            16,
-            local_mode ? std::min<size_t>(2000, base_number) : 8000,
-            local_mode ? 3 : 5
-        );
-    }
-
-    IVFIndex ivf_index = IVFIndex();
-    if (needs_ivf) {
-        ivf_index = build_ivf_index(
-            base,
-            base_number,
-            vecdim,
-            ivf_nlist,
-            local_mode ? std::min<size_t>(2000, base_number) : 8000,
-            local_mode ? 3 : 4
-        );
-    }
-
-    HNSWAnnIndex hnsw_index = HNSWAnnIndex();
-    if (needs_hnsw) {
-        hnsw_index = build_hnsw_ann_index(
-            base,
-            base_number,
-            vecdim,
-            hnsw_M,
-            hnsw_efc,
-            hnsw_ef,
-            local_mode ? true : hnsw_rebuild
-        );
-    }
-
+    PQFastScanIndex pqfs_index = build_pq_fastscan_index(
+        base,
+        base_number,
+        vecdim,
+        12,
+        16,
+        local_mode ? std::min<size_t>(2000, base_number) : 8000,
+        local_mode ? 3 : 5
+    );
     int64_t build_end = ann_now_us();
     double build_ms = static_cast<double>(build_end - build_begin) / 1000.0;
 
@@ -1037,9 +538,6 @@ static int run_serial_ann_main(int argc, char *argv[])
                 k,
                 pqfs_index,
                 pqfs_p,
-                ivf_index,
-                ivf_nprobe,
-                hnsw_index,
                 threads,
                 results
             );
@@ -1056,9 +554,6 @@ static int run_serial_ann_main(int argc, char *argv[])
                 k,
                 pqfs_index,
                 pqfs_p,
-                ivf_index,
-                ivf_nprobe,
-                hnsw_index,
                 threads,
                 results
             );
@@ -1081,9 +576,6 @@ static int run_serial_ann_main(int argc, char *argv[])
                 k,
                 pqfs_index,
                 pqfs_p,
-                ivf_index,
-                ivf_nprobe,
-                hnsw_index,
                 threads
             );
 
@@ -1127,28 +619,14 @@ static int run_serial_ann_main(int argc, char *argv[])
     summary.base_n = base_number;
     summary.query_n = test_number;
     summary.k = k;
-    summary.nlist = needs_ivf ? ivf_index.nlist : 0;
-    summary.nprobe = needs_ivf ? ivf_nprobe : (needs_hnsw ? hnsw_ef : 0);
-    summary.p = needs_hnsw ? hnsw_efc : pqfs_p;
+    summary.nlist = 0;
+    summary.nprobe = 0;
+    summary.p = pqfs_p;
     summary.recall = avg_recall;
     summary.latency_us = avg_latency;
     summary.speedup = 0.0;
     summary.build_ms = build_ms;
-    if (needs_hnsw) {
-        std::ostringstream hnsw_notes;
-        hnsw_notes << (is_query_batch_algorithm(algorithm) ? "phase6: HNSW query-level batch parallel; wall_time_per_query" : "phase6: HNSW baseline")
-                   << "; M=" << hnsw_M
-                   << "; efConstruction=" << hnsw_efc
-                   << "; efSearch=" << hnsw_ef
-                   << "; loaded=" << (hnsw_index.loaded_from_file ? "yes" : "no");
-        summary.notes = hnsw_notes.str();
-    } else if (algorithm.find("ivfpq") != std::string::npos) {
-        summary.notes = is_query_batch_algorithm(algorithm) ? "phase5: IVF-PQ query-level batch parallel; wall_time_per_query" : "phase5: IVF-PQ baseline + IVF-PQ MT";
-    } else if (needs_ivf) {
-        summary.notes = is_query_batch_algorithm(algorithm) ? "phase3-4: IVF query-level batch parallel; wall_time_per_query" : "phase3-4: IVF-SIMD baseline + IVF MT";
-    } else {
-        summary.notes = is_query_batch_algorithm(algorithm) ? "phase1-3b: query-level batch parallel; wall_time_per_query" : "phase1-3: logging + Flat-SIMD MT + PQFastScan MT";
-    }
+    summary.notes = is_query_batch_algorithm(algorithm) ? "phase1-3b: query-level batch parallel; wall_time_per_query" : "phase1-3: logging + Flat-SIMD MT + PQFastScan MT";
     ann_append_summary_csv(summary);
 
     if (!local_mode) {
@@ -1157,13 +635,4 @@ static int run_serial_ann_main(int argc, char *argv[])
         delete[] base;
     }
     return 0;
-}
-
-int main(int argc, char *argv[])
-{
-#ifdef ANN_ENABLE_MPI
-    return run_mpi_ann_main(argc, argv);
-#else
-    return run_serial_ann_main(argc, argv);
-#endif
 }

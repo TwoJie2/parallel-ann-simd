@@ -1,4 +1,0 @@
-average recall: 0.992951
-average latency (us): 2528.37
-
-Authorized users only. All activities may be monitored and reported.
