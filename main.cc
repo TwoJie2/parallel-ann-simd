@@ -36,6 +36,7 @@
 #include "ann_ivfpq_mt.h"
 #include "ann_hnsw.h"
 #include "ann_mpi_common.h"
+#include "ann_mpi_graph.h"
 
 using namespace hnswlib;
 
@@ -588,6 +589,21 @@ static void generate_local_data(
 }
 
 #ifdef ANN_ENABLE_MPI
+static inline bool is_mpi_ann_algorithm(const std::string& algorithm)
+{
+    return algorithm == "mpi_ivf" ||
+           algorithm == "mpi_ivf_omp" ||
+           algorithm == "mpi_ivf_openmp" ||
+           algorithm == "mpi_ivf_pthread" ||
+           algorithm == "mpi_hnsw_shard" ||
+           algorithm == "mpi_ivf_hnsw" ||
+           algorithm == "mpi_ivf_hnsw_omp" ||
+           algorithm == "mpi_ivf_hnsw_openmp" ||
+           algorithm == "mpi_hnsw_router" ||
+           algorithm == "mpi_hnsw_router_omp" ||
+           algorithm == "mpi_hnsw_router_openmp";
+}
+
 static inline bool is_mpi_ivf_algorithm(const std::string& algorithm)
 {
     return algorithm == "mpi_ivf" ||
@@ -596,7 +612,26 @@ static inline bool is_mpi_ivf_algorithm(const std::string& algorithm)
            algorithm == "mpi_ivf_pthread";
 }
 
-static inline std::string mpi_ivf_backend_name(const std::string& algorithm)
+static inline bool is_mpi_hnsw_shard_algorithm(const std::string& algorithm)
+{
+    return algorithm == "mpi_hnsw_shard";
+}
+
+static inline bool is_mpi_ivf_hnsw_algorithm(const std::string& algorithm)
+{
+    return algorithm == "mpi_ivf_hnsw" ||
+           algorithm == "mpi_ivf_hnsw_omp" ||
+           algorithm == "mpi_ivf_hnsw_openmp";
+}
+
+static inline bool is_mpi_hnsw_router_algorithm(const std::string& algorithm)
+{
+    return algorithm == "mpi_hnsw_router" ||
+           algorithm == "mpi_hnsw_router_omp" ||
+           algorithm == "mpi_hnsw_router_openmp";
+}
+
+static inline std::string mpi_ann_backend_name(const std::string& algorithm)
 {
     if (algorithm.find("omp") != std::string::npos ||
         algorithm.find("openmp") != std::string::npos) {
@@ -624,6 +659,41 @@ static inline std::priority_queue<std::pair<float, uint32_t> > run_mpi_local_ivf
         return ivf_search_pthread(local_base, query, local_ivf, k, nprobe, threads);
     }
     return ivf_search(local_base, query, local_ivf, k, nprobe);
+}
+
+static inline std::priority_queue<std::pair<float, uint32_t> > run_mpi_local_ann_search(
+    const std::string& algorithm,
+    float* local_base,
+    float* query,
+    const IVFIndex& local_ivf,
+    const MpiHnswShardIndex& hnsw_shard_index,
+    const MpiIvfHnswIndex& ivf_hnsw_index,
+    const MpiHnswRouterIndex& router_index,
+    size_t k,
+    size_t nprobe,
+    size_t threads,
+    int rank
+) {
+    if (is_mpi_ivf_algorithm(algorithm)) {
+        return run_mpi_local_ivf_search(algorithm, local_base, query, local_ivf, k, nprobe, threads);
+    }
+    if (is_mpi_hnsw_shard_algorithm(algorithm)) {
+        return mpi_hnsw_shard_search(hnsw_shard_index, query, k);
+    }
+    if (algorithm == "mpi_ivf_hnsw_omp" || algorithm == "mpi_ivf_hnsw_openmp") {
+        return mpi_ivf_hnsw_search_openmp(local_base, query, ivf_hnsw_index, k, nprobe, threads);
+    }
+    if (algorithm == "mpi_ivf_hnsw") {
+        return mpi_ivf_hnsw_search(local_base, query, ivf_hnsw_index, k, nprobe);
+    }
+    if (algorithm == "mpi_hnsw_router_omp" || algorithm == "mpi_hnsw_router_openmp") {
+        return mpi_hnsw_router_search_openmp(router_index, query, k, rank, threads);
+    }
+    if (algorithm == "mpi_hnsw_router") {
+        return mpi_hnsw_router_search(router_index, query, k, rank);
+    }
+    std::priority_queue<std::pair<float, uint32_t> > empty;
+    return empty;
 }
 
 static inline void pack_mpi_candidates(
@@ -677,12 +747,19 @@ static int run_mpi_ann_main(int argc, char *argv[])
     const size_t pqfs_p = cfg_size(run_cfg, "ANN_P", "ANN_P", 1500, 10, 1000000);
     const size_t ivf_nlist = cfg_size(run_cfg, "ANN_NLIST", "ANN_NLIST", 128, 1, 4096);
     const size_t ivf_nprobe = cfg_size(run_cfg, "ANN_NPROBE", "ANN_NPROBE", 32, 1, 4096);
+    const size_t hnsw_M = cfg_size(run_cfg, "ANN_HNSW_M", "ANN_HNSW_M", 16, 4, 96);
+    const size_t hnsw_efc = cfg_size(run_cfg, "ANN_HNSW_EFC", "ANN_HNSW_EFC", 100, 20, 2000);
+    const size_t hnsw_ef = cfg_size(run_cfg, "ANN_HNSW_EF", "ANN_HNSW_EF", 80, 10, 2000);
+    const size_t graph_parts_per_rank = cfg_size(run_cfg, "ANN_GRAPH_PARTS_PER_RANK", "ANN_GRAPH_PARTS_PER_RANK", 4, 1, 64);
+    const size_t graph_router_probe = cfg_size(run_cfg, "ANN_GRAPH_ROUTER_PROBE", "ANN_GRAPH_ROUTER_PROBE", 16, 1, 4096);
     const size_t k = 10;
 
-    if (!is_mpi_ivf_algorithm(algorithm)) {
+    if (!is_mpi_ann_algorithm(algorithm)) {
         if (rank == 0) {
             std::cerr << "unsupported MPI ANN_ALGO=" << algorithm
-                      << "; use mpi_ivf, mpi_ivf_omp, or mpi_ivf_pthread\n";
+                      << "; use mpi_ivf, mpi_ivf_omp, mpi_ivf_pthread, "
+                      << "mpi_hnsw_shard, mpi_ivf_hnsw, mpi_ivf_hnsw_omp, "
+                      << "mpi_hnsw_router, or mpi_hnsw_router_omp\n";
         }
         MPI_Finalize();
         return 2;
@@ -771,22 +848,142 @@ static int run_mpi_ann_main(int argc, char *argv[])
                   << " query=" << test_number
                   << " dim=" << vecdim
                   << " nlist=" << ivf_nlist
-                  << " nprobe=" << ivf_nprobe << "\n";
+                  << " nprobe=" << ivf_nprobe
+                  << " M=" << hnsw_M
+                  << " efC=" << hnsw_efc
+                  << " ef=" << hnsw_ef
+                  << " parts_per_rank=" << graph_parts_per_rank
+                  << " router_probe=" << graph_router_probe << "\n";
+    }
+
+    std::vector<float> all_router_centroids;
+    std::vector<int> all_router_owners;
+    std::vector<int> all_router_local_ids;
+    if (is_mpi_hnsw_router_algorithm(algorithm)) {
+        size_t local_parts = std::min(graph_parts_per_rank, local_base_number == 0 ? static_cast<size_t>(0) : local_base_number);
+        std::vector<float> local_centroids(local_parts * vecdim, 0.0f);
+        for (size_t p = 0; p < local_parts; ++p) {
+            size_t begin = p * local_base_number / local_parts;
+            size_t end = (p + 1) * local_base_number / local_parts;
+            std::vector<float> centroid;
+            mpi_compute_centroid_for_range(local_base, vecdim, begin, end, centroid);
+            for (size_t d = 0; d < vecdim; ++d) {
+                local_centroids[p * vecdim + d] = centroid[d];
+            }
+        }
+
+        int local_part_count = static_cast<int>(local_parts);
+        std::vector<int> part_counts(world_size, 0);
+        MPI_Allgather(&local_part_count, 1, MPI_INT, part_counts.data(), 1, MPI_INT, MPI_COMM_WORLD);
+
+        std::vector<int> float_counts(world_size, 0), float_displs(world_size, 0), part_displs(world_size, 0);
+        int total_parts_int = 0;
+        int total_floats = 0;
+        for (int r = 0; r < world_size; ++r) {
+            part_displs[r] = total_parts_int;
+            float_displs[r] = total_floats;
+            total_parts_int += part_counts[r];
+            float_counts[r] = part_counts[r] * static_cast<int>(vecdim);
+            total_floats += float_counts[r];
+        }
+
+        all_router_centroids.assign(static_cast<size_t>(total_floats), 0.0f);
+        MPI_Allgatherv(
+            local_centroids.empty() ? NULL : local_centroids.data(),
+            local_part_count * static_cast<int>(vecdim),
+            MPI_FLOAT,
+            all_router_centroids.empty() ? NULL : all_router_centroids.data(),
+            float_counts.data(),
+            float_displs.data(),
+            MPI_FLOAT,
+            MPI_COMM_WORLD
+        );
+
+        std::vector<int> local_owners(local_parts, rank);
+        std::vector<int> local_ids(local_parts, 0);
+        for (size_t p = 0; p < local_parts; ++p) local_ids[p] = static_cast<int>(p);
+        all_router_owners.assign(static_cast<size_t>(total_parts_int), 0);
+        all_router_local_ids.assign(static_cast<size_t>(total_parts_int), -1);
+        MPI_Allgatherv(
+            local_owners.empty() ? NULL : local_owners.data(),
+            local_part_count,
+            MPI_INT,
+            all_router_owners.empty() ? NULL : all_router_owners.data(),
+            part_counts.data(),
+            part_displs.data(),
+            MPI_INT,
+            MPI_COMM_WORLD
+        );
+        MPI_Allgatherv(
+            local_ids.empty() ? NULL : local_ids.data(),
+            local_part_count,
+            MPI_INT,
+            all_router_local_ids.empty() ? NULL : all_router_local_ids.data(),
+            part_counts.data(),
+            part_displs.data(),
+            MPI_INT,
+            MPI_COMM_WORLD
+        );
     }
 
     int64_t build_begin = ann_now_us();
-    IVFIndex local_ivf = build_ivf_index(
-        local_base,
-        local_base_number,
-        vecdim,
-        ivf_nlist,
-        local_mode ? std::min<size_t>(2000, local_base_number) : std::min<size_t>(8000, local_base_number),
-        local_mode ? 3 : 4
-    );
+    IVFIndex local_ivf = IVFIndex();
+    MpiHnswShardIndex local_hnsw_shard = MpiHnswShardIndex();
+    MpiIvfHnswIndex local_ivf_hnsw = MpiIvfHnswIndex();
+    MpiHnswRouterIndex local_router = MpiHnswRouterIndex();
+
+    if (is_mpi_ivf_algorithm(algorithm)) {
+        local_ivf = build_ivf_index(
+            local_base,
+            local_base_number,
+            vecdim,
+            ivf_nlist,
+            local_mode ? std::min<size_t>(2000, local_base_number) : std::min<size_t>(8000, local_base_number),
+            local_mode ? 3 : 4
+        );
+    } else if (is_mpi_hnsw_shard_algorithm(algorithm)) {
+        local_hnsw_shard = build_mpi_hnsw_shard_index(
+            local_base,
+            local_base_number,
+            vecdim,
+            hnsw_M,
+            hnsw_efc,
+            hnsw_ef
+        );
+    } else if (is_mpi_ivf_hnsw_algorithm(algorithm)) {
+        local_ivf_hnsw = build_mpi_ivf_hnsw_index(
+            local_base,
+            local_base_number,
+            vecdim,
+            ivf_nlist,
+            local_mode ? std::min<size_t>(2000, local_base_number) : std::min<size_t>(8000, local_base_number),
+            local_mode ? 3 : 4,
+            hnsw_M,
+            hnsw_efc,
+            hnsw_ef
+        );
+    } else if (is_mpi_hnsw_router_algorithm(algorithm)) {
+        local_router = build_mpi_hnsw_router_index(
+            local_base,
+            local_base_number,
+            vecdim,
+            graph_parts_per_rank,
+            graph_router_probe,
+            hnsw_M,
+            hnsw_efc,
+            hnsw_ef,
+            rank,
+            all_router_centroids,
+            all_router_owners,
+            all_router_local_ids
+        );
+    }
+
     int64_t build_end = ann_now_us();
     double local_build_ms = static_cast<double>(build_end - build_begin) / 1000.0;
     double max_build_ms = 0.0;
     MPI_Reduce(&local_build_ms, &max_build_ms, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
 
     std::vector<SearchResult> results;
     if (rank == 0) {
@@ -806,14 +1003,18 @@ static int run_mpi_ann_main(int argc, char *argv[])
     for (size_t i = 0; i < test_number; ++i) {
         double query_begin = MPI_Wtime();
         std::priority_queue<std::pair<float, uint32_t> > local_res =
-            run_mpi_local_ivf_search(
+            run_mpi_local_ann_search(
                 algorithm,
                 local_base,
                 test_query + i * vecdim,
                 local_ivf,
+                local_hnsw_shard,
+                local_ivf_hnsw,
+                local_router,
                 k,
                 ivf_nprobe,
-                threads
+                threads,
+                rank
             );
 
         std::vector<AnnMpiCandidate> candidates = ann_mpi_queue_to_candidates(local_res, k);
@@ -861,27 +1062,67 @@ static int run_mpi_ann_main(int argc, char *argv[])
         summary.run_id = run_id;
         summary.mode = local_mode ? "local" : "official";
         summary.algorithm = algorithm;
-        summary.backend = mpi_ivf_backend_name(algorithm);
+        summary.backend = mpi_ann_backend_name(algorithm);
         summary.threads = threads;
         summary.base_n = base_number;
         summary.query_n = test_number;
         summary.k = k;
-        summary.nlist = local_ivf.nlist;
-        summary.nprobe = ivf_nprobe;
-        summary.p = pqfs_p;
+        if (is_mpi_ivf_algorithm(algorithm)) {
+            summary.nlist = local_ivf.nlist;
+            summary.nprobe = ivf_nprobe;
+            summary.p = pqfs_p;
+        } else if (is_mpi_ivf_hnsw_algorithm(algorithm)) {
+            summary.nlist = local_ivf_hnsw.ivf.nlist;
+            summary.nprobe = ivf_nprobe;
+            summary.p = hnsw_ef;
+        } else if (is_mpi_hnsw_router_algorithm(algorithm)) {
+            summary.nlist = all_router_owners.size();
+            summary.nprobe = graph_router_probe;
+            summary.p = hnsw_ef;
+        } else {
+            summary.nlist = 0;
+            summary.nprobe = hnsw_ef;
+            summary.p = hnsw_efc;
+        }
         summary.recall = avg_recall;
         summary.latency_us = avg_latency;
         summary.speedup = 0.0;
         summary.build_ms = max_build_ms;
 
         std::ostringstream notes;
-        notes << "mpi_ivf: np=" << world_size
+        notes << algorithm << ": np=" << world_size
               << "; shard_begin_rank0=" << shard.begin
               << "; shard_count_rank0=" << shard.count
               << "; gather_merge_avg_us=" << std::setprecision(8) << avg_comm_merge
               << "; base_sharded=yes";
+        if (is_mpi_ivf_algorithm(algorithm)) {
+            notes << "; nlist=" << local_ivf.nlist
+                  << "; nprobe=" << ivf_nprobe;
+        } else if (is_mpi_hnsw_shard_algorithm(algorithm)) {
+            notes << "; graph=sharded_hnsw"
+                  << "; M=" << hnsw_M
+                  << "; efConstruction=" << hnsw_efc
+                  << "; efSearch=" << hnsw_ef;
+        } else if (is_mpi_ivf_hnsw_algorithm(algorithm)) {
+            notes << "; graph=ivf_hnsw"
+                  << "; nlist=" << local_ivf_hnsw.ivf.nlist
+                  << "; nprobe=" << ivf_nprobe
+                  << "; non_empty_lists_rank0=" << local_ivf_hnsw.non_empty_lists
+                  << "; M=" << hnsw_M
+                  << "; efConstruction=" << hnsw_efc
+                  << "; efSearch=" << hnsw_ef;
+        } else if (is_mpi_hnsw_router_algorithm(algorithm)) {
+            notes << "; graph=hnsw_on_hnsw_router"
+                  << "; parts_per_rank=" << graph_parts_per_rank
+                  << "; router_probe=" << graph_router_probe
+                  << "; total_router_parts=" << all_router_owners.size()
+                  << "; M=" << hnsw_M
+                  << "; efConstruction=" << hnsw_efc
+                  << "; efSearch=" << hnsw_ef;
+        }
         summary.notes = notes.str();
         ann_append_mpi_summary_csv(summary);
+
     }
 
     if (!local_mode) {

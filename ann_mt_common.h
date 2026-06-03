@@ -138,6 +138,10 @@ static inline std::string ann_mpi_run_outputs_dir()
     return ann_mpi_results_dir() + "/run_outputs";
 }
 
+static inline std::string ann_mpi_report_tables_dir()
+{
+    return ann_mpi_results_dir() + "/report_tables";
+}
 
 static inline std::string ann_mpi_summary_path()
 {

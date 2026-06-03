@@ -111,6 +111,68 @@ static inline HNSWAnnIndex build_hnsw_ann_index(
     return index;
 }
 
+
+static inline HNSWAnnIndex build_hnsw_ann_index_from_ids(
+    float* base,
+    size_t dim,
+    const std::vector<uint32_t>& ids,
+    size_t M,
+    size_t ef_construction,
+    size_t ef_search
+) {
+    HNSWAnnIndex index;
+    index.dim = dim;
+    index.base_number = ids.size();
+    index.M = M;
+    index.ef_construction = ef_construction;
+    index.ef_search = ef_search;
+    index.loaded_from_file = false;
+    if (dim == 0 || ids.empty()) return index;
+
+    index.space.reset(new hnswlib::InnerProductSpace(dim));
+    size_t graph_M = std::max<size_t>(2, std::min<size_t>(M, std::max<size_t>(2, ids.size())));
+    index.alg.reset(new hnswlib::HierarchicalNSW<float>(
+        index.space.get(),
+        ids.size(),
+        graph_M,
+        ef_construction
+    ));
+
+    index.alg->addPoint(
+        base + static_cast<size_t>(ids[0]) * dim,
+        static_cast<hnswlib::labeltype>(ids[0])
+    );
+
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic, 64)
+#endif
+    for (long long i = 1; i < static_cast<long long>(ids.size()); ++i) {
+        uint32_t id = ids[static_cast<size_t>(i)];
+        index.alg->addPoint(
+            base + static_cast<size_t>(id) * dim,
+            static_cast<hnswlib::labeltype>(id)
+        );
+    }
+    index.alg->setEf(ef_search);
+    return index;
+}
+
+static inline HNSWAnnIndex build_hnsw_ann_index_in_memory(
+    float* base,
+    size_t base_number,
+    size_t dim,
+    size_t M,
+    size_t ef_construction,
+    size_t ef_search
+) {
+    std::vector<uint32_t> ids;
+    ids.reserve(base_number);
+    for (size_t i = 0; i < base_number; ++i) {
+        ids.push_back(static_cast<uint32_t>(i));
+    }
+    return build_hnsw_ann_index_from_ids(base, dim, ids, M, ef_construction, ef_search);
+}
+
 static inline std::priority_queue<std::pair<float, uint32_t> > hnsw_search(
     const HNSWAnnIndex& index,
     const float* query,
