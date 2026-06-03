@@ -138,10 +138,6 @@ static inline std::string ann_mpi_run_outputs_dir()
     return ann_mpi_results_dir() + "/run_outputs";
 }
 
-static inline std::string ann_mpi_report_tables_dir()
-{
-    return ann_mpi_results_dir() + "/report_tables";
-}
 
 static inline std::string ann_mpi_summary_path()
 {
@@ -159,7 +155,6 @@ static inline void ann_prepare_mpi_log_dirs()
     ann_mkdir_if_needed(ann_mpi_results_dir());
     ann_mkdir_if_needed(ann_mpi_exp_logs_dir());
     ann_mkdir_if_needed(ann_mpi_run_outputs_dir());
-    ann_mkdir_if_needed(ann_mpi_report_tables_dir());
     ann_mkdir_if_needed("files/configs");
 }
 

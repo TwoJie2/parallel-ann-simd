@@ -1,2 +1,22 @@
 run_id,mode,algorithm,backend,threads,base_n,query_n,k,nlist,nprobe,p,recall,latency_us,speedup,build_ms,notes
 20260602_194558,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.99645,418.125,0,222.255,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=45.819402; base_sharded=yes
+20260603_085539,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.9952,3546.29,0,948.904,mpi_ivf: np=1; shard_begin_rank0=0; shard_count_rank0=100000; gather_merge_avg_us=3.6081076; base_sharded=yes
+20260603_090534,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.9952,3990.0945,0,946.653,mpi_ivf: np=1; shard_begin_rank0=0; shard_count_rank0=100000; gather_merge_avg_us=3.7623644; base_sharded=yes
+20260603_090549,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.99585,1699.736,0,551.225,mpi_ivf: np=2; shard_begin_rank0=0; shard_count_rank0=50000; gather_merge_avg_us=54.050326; base_sharded=yes
+20260603_090604,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.996,777.9475,0,321.554,mpi_ivf: np=4; shard_begin_rank0=0; shard_count_rank0=25000; gather_merge_avg_us=15.451789; base_sharded=yes
+20260603_090619,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.99645,397.209,0,221.383,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=59.745193; base_sharded=yes
+20260603_090636,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.99645,427.4725,0,221.174,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=110.82673; base_sharded=yes
+20260603_090650,official,mpi_ivf_omp,mpi_openmp,2,100000,2000,10,128,32,1500,0.99645,988.299,0,223.221,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=69.631696; base_sharded=yes
+20260603_090705,official,mpi_ivf_omp,mpi_openmp,4,100000,2000,10,128,32,1500,0.996,993.676,0,321.346,mpi_ivf: np=4; shard_begin_rank0=0; shard_count_rank0=25000; gather_merge_avg_us=70.344329; base_sharded=yes
+20260603_090721,official,mpi_ivf_omp,mpi_openmp,8,100000,2000,10,128,32,1500,0.99585,1433.382,0,550.23,mpi_ivf: np=2; shard_begin_rank0=0; shard_count_rank0=50000; gather_merge_avg_us=27.305722; base_sharded=yes
+20260603_090736,official,mpi_ivf_pthread,mpi_pthread,2,100000,2000,10,128,32,1500,0.99645,1062.182,0,228.83,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=175.3093; base_sharded=yes
+20260603_090751,official,mpi_ivf_pthread,mpi_pthread,4,100000,2000,10,128,32,1500,0.996,1082.3725,0,329.15,mpi_ivf: np=4; shard_begin_rank0=0; shard_count_rank0=25000; gather_merge_avg_us=30.804992; base_sharded=yes
+20260603_090806,official,mpi_ivf_pthread,mpi_pthread,8,100000,2000,10,128,32,1500,0.99585,1377.6315,0,542.905,mpi_ivf: np=2; shard_begin_rank0=0; shard_count_rank0=50000; gather_merge_avg_us=106.56381; base_sharded=yes
+20260603_090821,official,mpi_ivf,mpi,1,100000,2000,10,128,8,1500,0.94555,128.525,0,221.579,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=24.11592; base_sharded=yes
+20260603_090836,official,mpi_ivf,mpi,1,100000,2000,10,128,16,1500,0.98295,198.231,0,220.903,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=26.663065; base_sharded=yes
+20260603_090851,official,mpi_ivf,mpi,1,100000,2000,10,128,64,1500,0.99985,735.484,0,222.094,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=42.475581; base_sharded=yes
+20260603_090906,official,mpi_ivf,mpi,1,100000,2000,10,64,32,1500,0.99895,798.143,0,113.724,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=111.75025; base_sharded=yes
+20260603_090921,official,mpi_ivf,mpi,1,100000,2000,10,256,32,1500,0.9892,225.1265,0,458.58,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=27.245641; base_sharded=yes
+20260603_090936,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.99645,373.714,0,222.139,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=37.308812; base_sharded=yes
+20260603_090951,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.99645,429.082,0,222.937,mpi_ivf: np=8; shard_begin_rank0=0; shard_count_rank0=12500; gather_merge_avg_us=101.0623; base_sharded=yes
+20260603_091837,official,mpi_ivf,mpi,1,100000,2000,10,128,32,1500,0.9972,265.7525,0,155.983,mpi_ivf: np=16; shard_begin_rank0=0; shard_count_rank0=6250; gather_merge_avg_us=78.457236; base_sharded=yes
