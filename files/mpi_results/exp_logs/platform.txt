@@ -460,3 +460,14 @@ ANN_P=
 ANN_LOCAL=
 result_dir=files/mpi_results
 ---
+run_id=20260608_211303
+hostname=node1_ubss8
+arch=aarch64
+neon=1
+openmp=201511
+ANN_ALGO=
+ANN_THREADS=
+ANN_P=
+ANN_LOCAL=
+result_dir=files/mpi_results
+---

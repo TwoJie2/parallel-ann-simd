@@ -2,7 +2,7 @@
 #PBS -N qsub_mpi
 #PBS -e test.e
 #PBS -o test.o
-#PBS -l nodes=2:ppn=8
+#PBS -l nodes=1:ppn=8
 
 NODES=$(cat $PBS_NODEFILE | sort | uniq)
 
